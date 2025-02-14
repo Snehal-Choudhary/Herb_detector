@@ -50,6 +50,11 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 def home():
     return render_template("index.html")
 
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
 # Function to fetch taxonomy and geographic distribution data from GBIF API
 import requests
 
