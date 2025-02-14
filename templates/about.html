@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Plant Identifier</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🌿 About Plant Identifier</h1>
+        <p>This application helps you identify plants using the <strong>Pl@ntNet API</strong>. 
+           Simply capture an image of a plant, and our system will identify it for you.</p>
+
+        <h2>📜 Features:</h2>
+        <ul>
+            <li>Instant camera capture & plant identification</li>
+            <li>Shows common & scientific names</li>
+            <li>Displays Ayurvedic uses of plants</li>
+        </ul>
+
+        <h2>👨‍💻 Developer Info</h2>
+        <p>Developed using Flask, OpenCV, and JavaScript.</p>
+	<p>Developed By </p>
+	<p>              -Snehal Choudhary.</p>
+
+	
+
+        <a href="{{ url_for('home') }}">🏠 Back to Home</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Identifier</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin-top: 20px;
+        }
+        video {
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+        }
+        img {
+            margin-top: 10px;
+            max-width: 80%;
+            border-radius: 10px;
+        }
+        .nav {
+            margin-bottom: 20px;
+        }
+        .nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/">Home</a>
+        <a href="/about">About</a>
+    </div>
+    <div class="container">
+        <h1>🌿 Plant Identifier</h1>
+        <p>Click the button to capture an image and identify the plant.</p>
+
+        <!-- Video preview -->
+        <video id="camera" autoplay></video>
+
+        <!-- Canvas to capture image -->
+        <canvas id="canvas" style="display:none;"></canvas>
+
+        <button onclick="captureAndUpload()">📸 Capture & Identify</button>
+
+        <div id="result"></div>
+        <img id="previewImage" src="" alt="" style="display:none;">
+    </div>
+
+    <script>
+        // Access camera and show live video
+        const video = document.getElementById("camera");
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => video.srcObject = stream)
+            .catch(err => {
+                document.getElementById("result").innerHTML = `<p style="color: red;">Camera access denied or unavailable.</p>`;
+                console.error("Error accessing camera:", err);
+            });
+
+function captureAndUpload() {
+    let canvas = document.getElementById("canvas");
+    let context = canvas.getContext("2d");
+    let video = document.getElementById("camera");
+    let previewImage = document.getElementById("previewImage");
+    let resultDiv = document.getElementById("result");
+
+    if (!canvas || !context || !video || !previewImage || !resultDiv) {
+        console.error("One or more required elements are missing!");
+        return;
+    }
+
+    // Clear previous results and old image
+    previewImage.style.display = "none";
+    previewImage.src = "";
+    resultDiv.innerHTML = "<p>🔍 Identifying...</p>";
+
+    // Force clear old data by appending a timestamp to avoid browser caching
+    let timestamp = new Date().getTime();
+
+    // Capture the image from the video feed
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Show preview image
+    let capturedImage = canvas.toDataURL("image/jpeg") + "?t=" + timestamp;
+    previewImage.src = capturedImage;
+    previewImage.style.display = "block";
+
+    // Convert canvas image to Blob and send to backend
+    canvas.toBlob(blob => {
+        let formData = new FormData();
+        formData.append("file", blob, `captured_image_${timestamp}.jpg`);
+
+        fetch("/identify", { method: "POST", body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">${data.error}</p>`;
+                } else {
+                    // Hide preview image after identification
+                    previewImage.style.display = "none";
+
+                    // Display identified plant details with taxonomy, occurrences, and distribution
+                    let identifiedImage = data.image_url 
+                        ? `<img src="${data.image_url}?t=${timestamp}" alt="Plant Image">` 
+                        : "";
+
+                    resultDiv.innerHTML = `
+                        <h2>${data.common_name} (${data.scientific_name})</h2>
+    			<p><strong>Confidence:</strong> ${data.confidence}</p>
+   			<p><strong>Ayurvedic Uses:</strong> ${data.ayurvedic_use}</p>
+    			<p><strong>Taxonomy:</strong> ${data.taxonomy}</p>
+    			<p><strong>Commonly Found In:</strong> ${data.distribution}</p>
+    			${identifiedImage}
+                    `;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `<p style="color: red;">Failed to identify the plant. Please try again.</p>`;
+                console.error("Error:", error);
+            });
+    }, "image/jpeg");
+}
+
+    </script>
+</body>
+</html>
