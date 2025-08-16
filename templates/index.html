@@ -83,58 +83,66 @@
                 console.error("Error accessing camera:", err);
             });
 
-        function captureAndUpload() {
-            let canvas = document.getElementById("canvas");
-            let context = canvas.getContext("2d");
-            let previewImage = document.getElementById("previewImage");
-            let resultDiv = document.getElementById("result");
+    function captureAndUpload() {
+        let canvas = document.getElementById("canvas");
+        let context = canvas.getContext("2d");
+        let previewImage = document.getElementById("previewImage");
+        let resultDiv = document.getElementById("result");
 
-            if (!canvas || !context || !video || !previewImage || !resultDiv) {
-                console.error("One or more required elements are missing!");
-                return;
-            }
-
-            previewImage.style.display = "none";
-            previewImage.src = "";
-            resultDiv.innerHTML = "<p>🔍 Identifying...</p>";
-            let timestamp = new Date().getTime();
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            let capturedImage = canvas.toDataURL("image/jpeg") + "?t=" + timestamp;
-            previewImage.src = capturedImage;
-            previewImage.style.display = "block";
-
-            canvas.toBlob(blob => {
-                let formData = new FormData();
-                formData.append("file", blob, `captured_image_${timestamp}.jpg`);
-
-                fetch("/identify", { method: "POST", body: formData })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.error) {
-                            resultDiv.innerHTML = `<p style="color: red;">${data.error}</p>`;
-                        } else {
-                            previewImage.style.display = "none";
-                            let identifiedImage = data.image_url 
-                                ? `<img src="${data.image_url}?t=${timestamp}" alt="Plant Image">` 
-                                : "";
-                            resultDiv.innerHTML = `
-                                <h2>${data.common_name} (${data.scientific_name})</h2>
-                                <p><strong>Confidence:</strong> ${data.confidence}</p>
-                                <p><strong>Ayurvedic Uses:</strong> ${data.ayurvedic_use}</p>
-                                <p><strong>Taxonomy:</strong> ${data.taxonomy}</p>
-                                <p><strong>Commonly Found In:</strong> ${data.distribution}</p>
-                                ${identifiedImage}
-                            `;
-                        }
-                    })
-                    .catch(error => {
-                        resultDiv.innerHTML = `<p style="color: red;">Failed to identify the plant. Please try again.</p>`;
-                        console.error("Error:", error);
-                    });
-            }, "image/jpeg");
+        if (!canvas || !context || !video || !previewImage || !resultDiv) {
+            console.error("One or more required elements are missing!");
+            return;
         }
+
+        previewImage.style.display = "none";
+        previewImage.src = "";
+        resultDiv.innerHTML = "<p>🔍 Identifying...</p>";
+        let timestamp = new Date().getTime();
+
+        // ✅ Resize the captured frame to max width = 500px
+        let scaleWidth = 500;
+        let scaleHeight = (video.videoHeight / video.videoWidth) * scaleWidth;
+        canvas.width = scaleWidth;
+        canvas.height = scaleHeight;
+        context.drawImage(video, 0, 0, scaleWidth, scaleHeight);
+
+        let capturedImage = canvas.toDataURL("image/jpeg") + "?t=" + timestamp;
+        previewImage.src = capturedImage;
+        previewImage.style.display = "block";
+
+        // ✅ Compress image before upload
+        canvas.toBlob(blob => {
+            let formData = new FormData();
+            formData.append("file", blob, `captured_image_${timestamp}.jpg`);
+
+            fetch("/identify", { method: "POST", body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        resultDiv.innerHTML = `<p style="color: red;">${data.error}</p>`;
+                    } else {
+                        previewImage.style.display = "none";
+                        let identifiedImage = data.image_url 
+                            ? `<img src="${data.image_url}?t=${timestamp}" alt="Plant Image">` 
+                            : "";
+                        resultDiv.innerHTML = `
+                            <h2>${data.common_name} (${data.scientific_name})</h2>
+                            <p><strong>Confidence:</strong> ${data.confidence}</p>
+                            <p><strong>Ayurvedic Uses:</strong> ${data.ayurvedic_use}</p>
+                            <p><strong>Taxonomy:</strong> ${data.taxonomy}</p>
+                            <p><strong>Commonly Found In:</strong> ${data.distribution}</p>
+                            ${identifiedImage}
+                        `;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `<p style="color: red;">Failed to identify the plant. Please try again.</p>`;
+                    console.error("Error:", error);
+                });
+        }, "image/jpeg", 0.8); // ✅ quality = 80%
+    }
+
     </script>
 </body>
 </html>
+
